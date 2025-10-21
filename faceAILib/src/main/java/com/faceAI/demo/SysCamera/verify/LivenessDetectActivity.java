@@ -1,31 +1,39 @@
 package com.faceAI.demo.SysCamera.verify;
 
-import static com.faceAI.demo.FaceAISettingsActivity.FRONT_BACK_CAMERA_FLAG;
-import static com.faceAI.demo.FaceAISettingsActivity.SYSTEM_CAMERA_DEGREE;
-import static com.faceAI.demo.FaceSDKConfig.CACHE_FACE_LOG_DIR;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
-import androidx.appcompat.app.AlertDialog;
+
 import com.ai.face.base.view.camera.CameraXBuilder;
 import com.ai.face.faceVerify.verify.FaceProcessBuilder;
 import com.ai.face.faceVerify.verify.FaceVerifyUtils;
 import com.ai.face.faceVerify.verify.ProcessCallBack;
 import com.ai.face.faceVerify.verify.VerifyStatus.ALIVE_DETECT_TYPE_ENUM;
 import com.ai.face.faceVerify.verify.VerifyStatus.VERIFY_DETECT_TIPS_ENUM;
-import com.ai.face.faceVerify.verify.liveness.MotionLivenessMode;
 import com.ai.face.faceVerify.verify.liveness.FaceLivenessType;
+import com.ai.face.faceVerify.verify.liveness.MotionLivenessMode;
 import com.faceAI.demo.R;
 import com.faceAI.demo.SysCamera.camera.MyCameraXFragment;
 import com.faceAI.demo.base.AbsBaseActivity;
 import com.faceAI.demo.base.utils.BitmapUtils;
 import com.faceAI.demo.base.utils.VoicePlayer;
 import com.faceAI.demo.base.view.DemoFaceCoverView;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
+import androidx.appcompat.app.AlertDialog;
+
+import static com.faceAI.demo.FaceAISettingsActivity.FRONT_BACK_CAMERA_FLAG;
+import static com.faceAI.demo.FaceAISettingsActivity.SYSTEM_CAMERA_DEGREE;
+import static com.faceAI.demo.FaceSDKConfig.CACHE_FACE_LOG_DIR;
 
 /**
  * 活体检测 SDK 接入演示代码.
@@ -108,7 +116,26 @@ public class LivenessDetectActivity extends AbsBaseActivity {
                     @Override
                     public void onLivenessDetected(float silentLivenessValue, Bitmap bitmap) {
                         BitmapUtils.saveBitmap(bitmap,CACHE_FACE_LOG_DIR,"liveBitmap"); //保存给插件用，原生开发忽略
-                        finishFaceVerify(9,R.string.liveness_detection_done,silentLivenessValue);
+                        String imagePath="";
+                        Log.d( "xxlfc","finishFaceVerify---"+CACHE_FACE_LOG_DIR +"liveBitmap");
+                        try {
+                            File dir = new File(CACHE_FACE_LOG_DIR);
+                            if (!dir.exists()) {
+                                dir.mkdirs();
+                            }
+                            String filename = "liveBitmap_" + System.currentTimeMillis() + ".jpg";
+                            File file = new File(dir, filename);
+                            FileOutputStream fos = new FileOutputStream(file);
+                            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos);
+                            fos.flush();
+                            fos.close();
+                            imagePath = file.getAbsolutePath();
+                            Log.d("xxlfc", "live image saved: " + imagePath);
+                        } catch (IOException e) {
+                            Log.e("xxlfc", "save live bitmap failed", e);
+                        }
+
+                        finishFaceVerify(9, R.string.liveness_detection_done, silentLivenessValue, imagePath);
                     }
 
                     //人脸识别，活体检测过程中的各种提示
@@ -349,12 +376,17 @@ public class LivenessDetectActivity extends AbsBaseActivity {
      * 识别结束返回结果, 为了给uniApp UTS插件，RN，Flutter统一的交互返回格式
      */
     private void finishFaceVerify(int code,int msgStrRes) {
-        finishFaceVerify(code,msgStrRes,0f);
+        finishFaceVerify(code,msgStrRes,0f,"");
     }
 
-    private void finishFaceVerify(int code, int msgStrRes,float silentLivenessScore) {
+    private void finishFaceVerify(int code, int msgStrRes,float silentLivenessScore,String strImg) {
+
+        String strInfo=     "LivenessDetectActivity finishFaceVerify code=" + code + " msg=" + getString(msgStrRes) + " silentLivenessScore=" + silentLivenessScore +"  strImg:"+strImg;
+
+        Log.d( "xxlfc","finishFaceVerify---"+strInfo);
         Intent intent = new Intent().putExtra("code", code)
                 .putExtra("msg", getString(msgStrRes))
+                .putExtra("imgPath", strImg)
                 .putExtra("silentLivenessScore", silentLivenessScore);
         setResult(RESULT_OK, intent);
         finish();
