@@ -8,10 +8,10 @@ android {
 
     defaultConfig {
         versionCode 20251021
-        versionName "20251021"
+        versionName "2025_10_21"
 
         applicationId "com.ai.face.verifyPub"
-        minSdk 21
+        minSdk 23
         targetSdk 36    //target SDK 还是28 的请参考question.md 文档说明
         
         ndk {
